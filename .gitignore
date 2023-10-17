@@ -1,0 +1,11 @@
+Include/
+Lib/
+Scripts/
+__pycache__/
+
+*.zip
+*.mp4
+*.jpg
+
+pyvenv.cfg
+keys_google.json
