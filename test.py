@@ -1,34 +1,25 @@
+
 import pandas as pd
 import numpy as np
+import datetime
 
-df= pd.read_excel('data/Bolsonaro + Lula - Validado.xlsx')
-df = df[[
-  'DataColeta', 
-  'Perfil', 
-  'DataPost', 
-  'DiaDaSemana',
-  'Plays', 
-  'Curtidas', 
-  'Comentarios', 
-  'Compart.', 
-  'Texto', 
-  'LinkFoto',
-  'LinkVideo', 
-  'LinkPost', 
-  'ID', 
-  'Duracao', 
-  'Duração Classificada',
-  'Retórica Aristotélica', 
-  'Dispositivo Retórico', 
-  'Tipo de conteúdo',
-  'Abordagem', 
-  'Tonalidade', 
-  'Main character', 
-  'Texto / Hashtag'
-]]
+df = pd.read_excel('data/Bolsonaro + Lula - Validado.xlsx')
+
+
+# ## Tratando coluna de duração
+
+def day_for_flaot(x):
+  if(isinstance(x, datetime.datetime)):
+    x = float(f"{x.day}.{x.month}")
+  print(x)
+  return x
+
+df['Duracao'] = df['Duracao'].apply(day_for_flaot)
+
+# ## Observando primeiro quartil antes e depois do filtro de porcentagem
 
 data = pd.read_csv('data/GoogleVision.csv')
-data = data.loc[data['ID'].isin(df['ID'])]
+data = data.loc[data['ID'].isin(df['ID'])] # Filtrando post que estão no dataset do tiktok
 data = data.loc[data['Subclass'] != 'text']
 data_test = data.loc[data['Percent'] >= 0.74]
 
@@ -46,40 +37,7 @@ print('Mediana:', data_test['Percent'].median())
 print('Média:', data_test['Percent'].mean())
 print('1º Quartil:', data_test['Percent'].quantile(.25))
 
-""" 
-import nltk
-from nltk.corpus import wordnet
-
-# Baixe o WordNet (caso ainda não tenha sido baixado)
-#nltk.download('wordnet')
-
-def sao_sinonimos(palavra1, palavra2):
-  sinonimos1 = set([lemma.name() for synset in wordnet.synsets(palavra1) for lemma in synset.lemmas()])
-  sinonimos2 = set([lemma.name() for synset in wordnet.synsets(palavra2) for lemma in synset.lemmas()])
-  print(sinonimos1)
-  print(sinonimos2)
-  return bool(sinonimos1.intersection(sinonimos2))
-
-a = 'male'
-b = 'man'
-print(sao_sinonimos(a, b))
-"""
-
-#df.set_index('ID', inplace=True)
-#print(data_test)
-""" 
-new_data = [
-  {'ID': 65554, 'class2': 'j2', 'class3': 'j2'},
-  {'ID': 8778, 'class3': 'k2'},
-  {'ID': 87876, 'class2': 'l2', 'class3': 'l2'}
-]
-a = pd.DataFrame(new_data)
-for id in data_test['ID'].unique():
-
-  print(data_test.loc[data_test['ID'] == id]['Class'].unique())
-  print(id) 
-"""
-
+# ## Montando dataset com colunas em dummy
 
 new_data = []
 for id in data_test['ID'].unique():
@@ -90,42 +48,75 @@ for id in data_test['ID'].unique():
 
 new_data = pd.DataFrame(new_data)
 new_data.fillna(0, inplace=True)
+new_data
 
-ordenado = data_test.groupby('Class').size().reset_index(name='Total').sort_values('Total')
-new_data = new_data[np.append(ordenado['Class'].tail(10).values, 'ID')]
+# ## Pegando quantidade de classes mais presentes nos dados
 
-testa = new_data.merge(df, on='ID', how='outer')
-colunas = [
+qtn_class = data_test.groupby('Class').size().reset_index(name='Total').sort_values('Total')
+qtn_class
+
+qtn = 50
+
+qtn_class.tail(qtn)
+
+new_data = new_data[np.append(qtn_class['Class'].tail(qtn).values, 'ID')]
+new_data
+
+# ## Verificando quantas classes ficam por post
+
+def verify(data: pd.DataFrame, lista):
+  if len(lista) == 1:
+    return data.loc[data[lista[0]] == 0]
+  return verify(data.loc[data[lista[0]] == 0], lista[1: ])
+
+verify(new_data, qtn_class.tail(qtn)["Class"].values)
+
+# # Fazendo merge dos dados com base no ID
+
+data_final = new_data.merge(df, on='ID', how='outer')
+data_final.columns
+
+# # Filtrando colunas para os dados
+
+df.columns
+
+columns =  np.append(qtn_class['Class'].tail(qtn).values, [
   'ID', 
-  'DataPost', 
-  'DataColeta', 
-  'DiaDaSemana', 
+  #'DataColeta', 
   'Perfil', 
+  #'DataPost', 
+  'DiaDaSemana',
+  #'Plays',                 Colunas que podem causar vazamento das informações
+  #'Comentarios', 
+  #'Compart.', 
   'Texto', 
+  #'LinkFoto',
+  #'LinkVideo',             Links não são pertinentes
+  #'LinkPost', 
   'Duracao', 
-  'Duração Classificada', 
-  'Event', 
-  'Tie', 
-  'Chin', 
-  'Smile', 
-  'Hat',
-  'Font', 
-  'Forehead', 
-  'Gesture', 
-  'Joy', 
-  'Person',
-  'Curtidas',
-]
-#np.append(df.columns, ordenado['Class'].tail(10).values)
-testa.sort_values('ID', inplace=True)
-df.sort_values('ID', inplace=True)
-testa.set_index('ID')
-testa = testa[colunas]
-df['Duracao'] = pd.to_numeric(df['Duracao'], errors='coerce', downcast='float')
-testa['Duracao'] = df['Duracao']
-#print(testa.info())
+  'Duração Classificada',
+  #'Retórica Aristotélica', 
+  #'Dispositivo Retórico', 
+  #'Tipo de conteúdo',      Classificações manual
+  #'Abordagem', 
+  #'Tonalidade', 
+  #'Main character', 
+  'Texto / Hashtag',
+  'Curtidas', 
+  ])
 
-print(testa['Duracao'])
-testa.to_csv('data/dfGoogle.csv')
-testa.to_excel('data/dfGoogle.xlsx')
-#df.merge(new_data, on='ID', how='outer')[colunas].to_csv('data/dfGoogle.csv')
+
+# ## Salvando resultado final
+
+data_final = data_final[columns]
+data_final
+
+data_final.sort_values('ID', inplace=True)
+data_final.set_index('ID')
+data_final['Duracao'] = pd.to_numeric(data_final['Duracao'], errors='coerce', downcast='signed')
+#data_final.to_excel('data/dfGoogle.xlsx')
+
+
+print(pd.get_dummies(data_final, columns='DiaDaSemana'))
+
+
