@@ -2,6 +2,7 @@ Include/
 Lib/
 Scripts/
 __pycache__/
+share/
 
 *.zip
 *.mp4

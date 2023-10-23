@@ -42,4 +42,5 @@ def create_file_id(perfis: List[str], path_turnos: List[str]):
       data.append({'File': file, 'ID':extractID(file, perfis[1], '.jpg', path_turnos),})
 
   data = pd.DataFrame(data)
-  data.to_csv('data/File-id.csv')
+  data.set_index(['ID'], inplace=True)
+  data[['File']].to_csv('data/File-id.csv')
