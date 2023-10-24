@@ -11,7 +11,6 @@ df = pd.read_excel('data/Bolsonaro + Lula - Validado.xlsx')
 def day_for_flaot(x):
   if(isinstance(x, datetime.datetime)):
     x = float(f"{x.day}.{x.month}")
-  print(x)
   return x
 
 df['Duracao'] = df['Duracao'].apply(day_for_flaot)
@@ -48,19 +47,23 @@ for id in data_test['ID'].unique():
 
 new_data = pd.DataFrame(new_data)
 new_data.fillna(0, inplace=True)
-new_data
+print('DataFrame contando todas as classes')
+print(new_data)
 
 # ## Pegando quantidade de classes mais presentes nos dados
 
 qtn_class = data_test.groupby('Class').size().reset_index(name='Total').sort_values('Total')
-qtn_class
+print('Quantidade de frequência de cada classe')
+print(qtn_class)
 
-qtn = 50
+qtn = 10
 
-qtn_class.tail(qtn)
+print(f'{qtn} classes mais frequentes')
+print(qtn_class.tail(qtn))
 
 new_data = new_data[np.append(qtn_class['Class'].tail(qtn).values, 'ID')]
-new_data
+print('Novo dataframe com classes em dummy e ID')
+print(new_data)
 
 # ## Verificando quantas classes ficam por post
 
@@ -68,17 +71,18 @@ def verify(data: pd.DataFrame, lista):
   if len(lista) == 1:
     return data.loc[data[lista[0]] == 0]
   return verify(data.loc[data[lista[0]] == 0], lista[1: ])
-
-verify(new_data, qtn_class.tail(qtn)["Class"].values)
+print(f'Todos os valores que não possuem nenhuma frequência das {qtn} classes mais frequentes')
+print(verify(new_data, qtn_class.tail(qtn)["Class"].values))
 
 # # Fazendo merge dos dados com base no ID
 
 data_final = new_data.merge(df, on='ID', how='outer')
-data_final.columns
+print('Colunas do dataframe final')
+print(data_final.columns)
 
 # # Filtrando colunas para os dados
-
-df.columns
+print('Colunas do dataset validado')
+print(df.columns)
 
 columns =  np.append(qtn_class['Class'].tail(qtn).values, [
   'ID', 
@@ -89,12 +93,12 @@ columns =  np.append(qtn_class['Class'].tail(qtn).values, [
   #'Plays',                 Colunas que podem causar vazamento das informações
   #'Comentarios', 
   #'Compart.', 
-  'Texto', 
+  #'Texto',               Decidir o que fazer com essa coluna 
   #'LinkFoto',
   #'LinkVideo',             Links não são pertinentes
   #'LinkPost', 
   'Duracao', 
-  'Duração Classificada',
+  #'Duração Classificada',
   #'Retórica Aristotélica', 
   #'Dispositivo Retórico', 
   #'Tipo de conteúdo',      Classificações manual
@@ -109,14 +113,41 @@ columns =  np.append(qtn_class['Class'].tail(qtn).values, [
 # ## Salvando resultado final
 
 data_final = data_final[columns]
-data_final
+print('Dataframe final com o filtro das colunas que serão utilizandos')
+print(data_final)
 
-data_final.sort_values('ID', inplace=True)
-data_final.set_index('ID')
+
 data_final['Duracao'] = pd.to_numeric(data_final['Duracao'], errors='coerce', downcast='signed')
-#data_final.to_excel('data/dfGoogle.xlsx')
+
+data_final = pd.get_dummies(data_final, columns=['DiaDaSemana', 'Perfil'], prefix='', prefix_sep='', dtype='int',)
+data_final.drop('lulaoficial', axis=1, inplace=True)
+data_final.rename({'bolsonaromessiasjair': 'Perfil'}, axis=1, inplace=True)
 
 
-print(pd.get_dummies(data_final, columns='DiaDaSemana'))
+""" 
+OBS na coluna perfil os valores repesentam
+1 == bolsonaromessiasjair
+0 == lulaoficial 
+"""
+
+print('DataFrame final com o dummy nas colunas de DiaDaSemana e Perfil')
+print(data_final)
 
 
+data_final = pd.get_dummies(data_final, columns=['Texto / Hashtag'], prefix='', prefix_sep='', dtype='int')
+print(data_final)
+aux = data_final['Texto + Hashtag'].apply(lambda x: 1 if x==1 else 0).astype('int32')
+aux = pd.DataFrame({"Texto":aux.values, "Hashtag":aux.values})
+data_final['Texto'] = aux['Texto'] + data_final['Texto']
+data_final['Hashtag'] = aux['Texto'] + data_final['Hashtag']
+data_final.drop(['Texto + Hashtag', 'Nenhum'], inplace=True, axis=1)
+
+
+print(data_final.columns.values)
+data_final.sort_values('ID', inplace=True)
+data_final.set_index('ID', inplace=True)
+
+print(data_final.columns)
+
+data_final.to_csv('data/dfGoogle.csv')
+data_final.to_excel('data/dfGoogle.xlsx')
