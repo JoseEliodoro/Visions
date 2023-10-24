@@ -7,7 +7,7 @@ share/
 *.zip
 *.mp4
 *.jpg
-*.ipynb
+
 
 pyvenv.cfg
 *.json
