@@ -7,7 +7,7 @@ share/
 *.zip
 *.mp4
 *.jpg
-
+*.json
+*.rar
 
 pyvenv.cfg
-*.json
